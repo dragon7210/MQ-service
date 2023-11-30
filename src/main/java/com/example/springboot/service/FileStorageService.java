@@ -1,9 +1,10 @@
 package com.example.springboot.service;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpEntity;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -24,22 +25,18 @@ import java.util.stream.Stream;
 
 @Service
 public class FileStorageService {
+    @Autowired
+    private JmsTemplate jmsTemplate;
 
+    @Autowired
+    private ResourceLoader resourceLoader;
     public FileStorageService() {
-        rabbitTemplate = null;
     }
-    private final RabbitTemplate rabbitTemplate;
-
-    @Value("${rabbitmq.exchange}")
-    private String exchange;
-
-    @Value("${rabbitmq.routingkey}")
-    private String routingKey;
     public void checkXmlfile5min(String folderPath, String specificPath){
         Path path = Paths.get(folderPath);
         System.out.println("File read and write every 5 mins");
         if (!Files.isDirectory(path)) {
-            throw new IllegalArgumentException("The provided path is not a directory");
+            System.out.println("Directory doesn't exist");
         }
 
         List<Path> result;
@@ -60,19 +57,13 @@ public class FileStorageService {
                 documentBuilder = documentBuilderFactory.newDocumentBuilder();
                 File xmlfile = new File(xmlFile.toString());
                 Path destinationPath = Paths.get(specificPath).resolve(xmlFile.getFileName());
-//                try {
-//                    Files.move(xmlFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-//                } catch (IOException e) {
-//                    throw new RuntimeException(e);
-//                }
-//                System.out.println("File move: "+xmlFile.getFileName()+"   "+destinationPath.toString());
-                RestTemplate restTemplate = new RestTemplate();
-                MultiValueMap<String, Object> map = new LinkedMultiValueMap<>();
-                map.add("file", new FileSystemResource(xmlFile.toFile()));
+                try {
+                    Files.move(xmlFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
 
-                HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(map);
-                // Send the file to the .NET service which interacts with MSMQ
-                String response = restTemplate.postForObject("", requestEntity, String.class);
+                sendFile("aaaa", xmlFile.toString());
 
 
             } catch (ParserConfigurationException e) {
@@ -80,6 +71,18 @@ public class FileStorageService {
             }
 
         });
+    }
+    public void sendFile(String destinationQueue, String filePath) {
+        try {
+            Path path = Paths.get(filePath);
+            byte[] fileContent = Files.readAllBytes(path);
+
+            jmsTemplate.convertAndSend(destinationQueue, fileContent);
+            System.out.println("File sent: "+filePath.toString());
+        } catch (IOException e) {
+            // Handle the exception properly
+            e.printStackTrace();
+        }
     }
 
 }
