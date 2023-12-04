@@ -20,10 +20,15 @@ public class SpringbootApplication {
 	}
 	//5mins
 	@Scheduled(fixedDelay = 30000) // Delay in milliseconds (5 min * 60 sec * 1000 ms)
-	public void scheduled5min() {
+	public void readXMLfromQueue() {
+		String folderPath = "C:/outbound";
+		fileService.readXMLfromQueue(folderPath);
+	}
+	@Scheduled(fixedDelay = 30000) // Delay in milliseconds (5 min * 60 sec * 1000 ms)
+	public void checkAndSendToQueue() {
 		String folderPath = "C:/outbound";
 		String specificPath = "C:/inbound";
-		fileService.checkXmlfile5min(folderPath, specificPath);
+		fileService.checkAndSendToQueue(folderPath, specificPath);
 	}
 
 }

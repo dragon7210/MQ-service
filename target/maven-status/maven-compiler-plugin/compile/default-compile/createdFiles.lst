@@ -1,2 +1,3 @@
 com\example\springboot\SpringbootApplication.class
+com\example\springboot\config\RestTemplateConfig.class
 com\example\springboot\service\FileStorageService.class
