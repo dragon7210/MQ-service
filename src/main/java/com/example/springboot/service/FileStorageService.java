@@ -1,5 +1,7 @@
 package com.example.springboot.service;
 import com.example.springboot.config.RestTemplateConfig;
+import com.example.springboot.config.requestJmsConfig;
+import com.example.springboot.config.responseJmsConfig;
 import jakarta.jms.BytesMessage;
 import jakarta.jms.JMSException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,11 +26,15 @@ import java.util.stream.Stream;
 public class FileStorageService {
 
     private final RestTemplateConfig restTemplate;
-    @Autowired
-    private JmsTemplate jmsTemplate;
 
-    public FileStorageService(RestTemplateConfig restTemplate) {
+    public requestJmsConfig requestJms;
+
+    public responseJmsConfig responseJms;
+
+    public FileStorageService(RestTemplateConfig restTemplate, requestJmsConfig requestJms, responseJmsConfig responseJms) {
         this.restTemplate = restTemplate;
+        this.requestJms = requestJms;
+        this.responseJms = responseJms;
     }
     public void checkAndSendToQueue(String folderPath, String specificPath){
         Path path = Paths.get(folderPath);
@@ -57,7 +63,7 @@ public class FileStorageService {
                 Path destinationPath = Paths.get(specificPath).resolve(xmlFile.getFileName());
                 ResponseEntity<String> response = sendPayloadWithCertificate("https://google.com", xmlFile.toString());
                 if(response != null){
-                    System.out.println("Response : " + jmsTemplate);
+                    System.out.println("Response : " + responseJms);
                     sendFile("aaaa", response.toString());
                     try {
                         Files.move(xmlFile, destinationPath, StandardCopyOption.REPLACE_EXISTING);
@@ -77,7 +83,7 @@ public class FileStorageService {
 //        try {
 //            Path path = Paths.get(filePath);
 //            byte[] fileContent = Files.readAllBytes(path);
-            jmsTemplate.convertAndSend(destinationQueue, response);
+            responseJms.convertAndSend(destinationQueue, response);
             System.out.println("File sent: "+response.toString());
 //        } catch (IOException e) {
 //             Handle the exception properly
@@ -97,7 +103,7 @@ public class FileStorageService {
     }
 
     public void readXMLfromQueue(String specfic){
-        BytesMessage message = (BytesMessage) jmsTemplate.receive("aaaa");
+        BytesMessage message = (BytesMessage) requestJms.receive("aaaa");
 
         // Process received message
         if (message != null) {
